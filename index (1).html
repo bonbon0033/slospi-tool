@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>スロスピ お知らせ作成ツール</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700;900&family=Oswald:wght@600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #0a0a12;
+  --surface: #111120;
+  --surface2: #181830;
+  --border: #2a2a4a;
+  --accent: #f0c040;
+  --accent2: #e05c30;
+  --accent3: #40c0f0;
+  --text: #e8e8f0;
+  --text-muted: #7878a0;
+  --success: #40d080;
+  --radius: 8px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.5);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { min-height: 100vh; background: var(--bg); color: var(--text); font-family: 'Noto Sans JP', sans-serif; }
+
+body {
+  background-image: 
+    radial-gradient(ellipse at 20% 0%, rgba(240,192,64,0.06) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(64,192,240,0.05) 0%, transparent 50%);
+}
+
+/* ======= HEADER ======= */
+header {
+  background: linear-gradient(135deg, #1a1a30, #0d0d1a);
+  border-bottom: 2px solid var(--accent);
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 2px 20px rgba(240,192,64,0.15);
+}
+.logo-badge {
+  background: var(--accent);
+  color: #000;
+  font-family: 'Oswald', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 8px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+}
+header h1 { font-size: 18px; font-weight: 700; color: var(--text); }
+header h1 span { color: var(--accent); }
+.header-sub { font-size: 12px; color: var(--text-muted); margin-left: auto; }
+
+/* ======= LAYOUT ======= */
+.app-container {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 32px 20px 80px;
+}
+
+/* ======= STEP INDICATOR ======= */
+.step-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-bottom: 36px;
+  position: relative;
+}
+.step-bar::before {
+  content: '';
+  position: absolute;
+  top: 19px;
+  left: 19px;
+  right: 19px;
+  height: 2px;
+  background: var(--border);
+  z-index: 0;
+}
+.step-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+.step-num {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  border: 2px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  transition: all 0.3s;
+}
+.step-item.active .step-num {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #000;
+  box-shadow: 0 0 16px rgba(240,192,64,0.4);
+}
+.step-item.done .step-num {
+  border-color: var(--success);
+  background: var(--success);
+  color: #000;
+}
+.step-item.done .step-num::after { content: '✓'; }
+.step-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  text-align: center;
+  white-space: nowrap;
+}
+.step-item.active .step-label { color: var(--accent); }
+.step-item.done .step-label { color: var(--success); }
+
+/* ======= PANELS ======= */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow);
+  display: none;
+}
+.panel.active { display: block; animation: fadeIn 0.3s ease; }
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.panel-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.panel-title .badge {
+  background: var(--accent);
+  color: #000;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: 4px;
+  letter-spacing: 0.5px;
+}
+.panel-title .badge.info { background: var(--accent3); }
+.panel-title .badge.success { background: var(--success); }
+
+/* ======= FORM ELEMENTS ======= */
+.form-group { margin-bottom: 20px; }
+.form-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-muted);
+  margin-bottom: 8px;
+  letter-spacing: 0.3px;
+}
+.form-label span { color: var(--accent); margin-left: 4px; }
+
+input[type="text"], input[type="datetime-local"], select, textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  color: var(--text);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  padding: 10px 14px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  outline: none;
+}
+input:focus, select:focus, textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(240,192,64,0.12);
+}
+textarea { resize: vertical; min-height: 120px; line-height: 1.7; }
+
+.form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.type-selector {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.type-option {
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s;
+  background: var(--bg);
+}
+.type-option:hover { border-color: var(--accent); }
+.type-option.selected {
+  border-color: var(--accent);
+  background: rgba(240,192,64,0.08);
+}
+.type-option .type-icon { font-size: 22px; margin-bottom: 6px; }
+.type-option .type-name { font-size: 13px; font-weight: 600; }
+.type-option .type-desc { font-size: 11px; color: var(--text-muted); margin-top: 3px; }
+
+/* ======= QUESTION LIST ======= */
+.question-list { display: flex; flex-direction: column; gap: 16px; }
+.question-item {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+  border-left: 3px solid var(--accent);
+}
+.q-label {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--accent);
+}
+.q-text {
+  font-size: 14px;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+.q-required { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+.q-required span { color: var(--accent2); }
+
+/* ======= DRAFT VIEW ======= */
+.draft-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+.draft-content {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  font-size: 14px;
+  line-height: 1.8;
+  min-height: 200px;
+  white-space: pre-wrap;
+}
+.draft-content h3 {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  color: var(--accent);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+
+/* ======= OUTPUT SELECTOR ======= */
+.output-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.output-option {
+  background: var(--bg);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+.output-option.checked {
+  border-color: var(--accent3);
+  background: rgba(64,192,240,0.05);
+}
+.output-option.required {
+  border-color: var(--success);
+  background: rgba(64,208,128,0.05);
+}
+.output-option .out-icon { font-size: 24px; margin-bottom: 8px; }
+.output-option .out-name { font-size: 13px; font-weight: 700; margin-bottom: 4px; }
+.output-option .out-desc { font-size: 11px; color: var(--text-muted); }
+.output-option .req-badge {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  font-size: 10px;
+  background: var(--success);
+  color: #000;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-weight: 700;
+}
+.check-icon {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  transition: all 0.2s;
+}
+.output-option.checked .check-icon {
+  background: var(--accent3);
+  border-color: var(--accent3);
+  color: #000;
+}
+
+/* ======= OUTPUT TABS ======= */
+.output-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0;
+}
+.tab-btn {
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  color: var(--text-muted);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--text); }
+.tab-btn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+}
+.tab-content { display: none; }
+.tab-content.active { display: block; animation: fadeIn 0.2s ease; }
+
+/* ======= OUTPUT CARDS ======= */
+.output-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 16px;
+}
+.output-card-header {
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.output-card-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.5px;
+}
+.copy-btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text-muted);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 11px;
+  padding: 4px 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.copy-btn:hover {
+  border-color: var(--accent3);
+  color: var(--accent3);
+}
+.copy-btn.copied {
+  border-color: var(--success);
+  color: var(--success);
+}
+.output-body {
+  padding: 16px;
+  font-size: 14px;
+  line-height: 1.8;
+  white-space: pre-wrap;
+  color: var(--text);
+}
+.output-body.html-preview {
+  font-family: monospace;
+  font-size: 12px;
+  color: #a0c8ff;
+  overflow-x: auto;
+}
+
+/* ======= BUTTONS ======= */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: var(--radius);
+  font-family: 'Noto Sans JP', sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  padding: 12px 24px;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+.btn-primary {
+  background: var(--accent);
+  color: #000;
+}
+.btn-primary:hover { background: #e0b030; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(240,192,64,0.3); }
+.btn-primary:disabled { background: var(--border); color: var(--text-muted); cursor: not-allowed; transform: none; box-shadow: none; }
+.btn-secondary {
+  background: var(--surface2);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+}
+.btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+.btn-success {
+  background: var(--success);
+  color: #000;
+}
+.btn-success:hover { background: #30c070; }
+.btn-danger {
+  background: transparent;
+  border: 1.5px solid var(--accent2);
+  color: var(--accent2);
+}
+.btn-danger:hover { background: var(--accent2); color: #fff; }
+.btn-full { width: 100%; }
+.btn-lg { padding: 14px 32px; font-size: 15px; }
+
+.action-row {
+  display: flex;
+  gap: 12px;
+  margin-top: 20px;
+  justify-content: flex-end;
+}
+
+/* ======= LOADING ======= */
+.loading-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(10,10,18,0.85);
+  z-index: 1000;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 20px;
+  backdrop-filter: blur(4px);
+}
+.loading-overlay.active { display: flex; }
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading-text { font-size: 15px; color: var(--text-muted); }
+.loading-sub { font-size: 12px; color: var(--text-muted); opacity: 0.7; }
+
+/* ======= NOTICE ======= */
+.notice-box {
+  background: rgba(64,192,240,0.08);
+  border: 1px solid rgba(64,192,240,0.3);
+  border-radius: var(--radius);
+  padding: 12px 16px;
+  font-size: 13px;
+  color: var(--accent3);
+  margin-bottom: 20px;
+  line-height: 1.6;
+}
+.notice-box.warn {
+  background: rgba(240,192,64,0.08);
+  border-color: rgba(240,192,64,0.3);
+  color: var(--accent);
+}
+
+/* ======= SAMPLE BADGE ======= */
+.reference-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.ref-tag {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  font-size: 11px;
+  padding: 4px 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.ref-tag:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ======= RESPONSIVE ======= */
+@media (max-width: 640px) {
+  .form-row { grid-template-columns: 1fr; }
+  .output-options { grid-template-columns: 1fr; }
+  .type-selector { grid-template-columns: 1fr 1fr; }
+  header h1 { font-size: 15px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge">SLOSPI</div>
+  <h1>お知らせ <span>作成ツール</span></h1>
+  <div class="header-sub">スロパチスピリット 運営管理</div>
+</header>
+
+<div class="app-container">
+  <!-- STEP BAR -->
+  <div class="step-bar">
+    <div class="step-item active" id="s1">
+      <div class="step-num">1</div>
+      <div class="step-label">概要入力</div>
+    </div>
+    <div class="step-item" id="s2">
+      <div class="step-num">2</div>
+      <div class="step-label">質問確認</div>
+    </div>
+    <div class="step-item" id="s3">
+      <div class="step-num">3</div>
+      <div class="step-label">草案確認</div>
+    </div>
+    <div class="step-item" id="s4">
+      <div class="step-num">4</div>
+      <div class="step-label">出力選択</div>
+    </div>
+    <div class="step-item" id="s5">
+      <div class="step-num">5</div>
+      <div class="step-label">完成</div>
+    </div>
+  </div>
+
+  <!-- STEP 1: 概要入力 -->
+  <div class="panel active" id="panel1">
+    <div class="panel-title">
+      <span class="badge">STEP 1</span>
+      キャンペーン・イベントの概要を入力
+    </div>
+
+    <div class="notice-box">
+      キャンペーンやイベントの情報を入力してください。AIが不明点を質問した上でお知らせ草案を作成します。
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">お知らせの種類 <span>*</span></label>
+      <div class="type-selector">
+        <div class="type-option selected" data-type="event" onclick="selectType(this)">
+          <div class="type-icon">🎰</div>
+          <div class="type-name">イベント</div>
+          <div class="type-desc">スロット大会・バトル系</div>
+        </div>
+        <div class="type-option" data-type="campaign" onclick="selectType(this)">
+          <div class="type-icon">🎁</div>
+          <div class="type-name">キャンペーン</div>
+          <div class="type-desc">ガチャ・アイテム販売</div>
+        </div>
+        <div class="type-option" data-type="maintenance" onclick="selectType(this)">
+          <div class="type-icon">🔧</div>
+          <div class="type-name">メンテ・お知らせ</div>
+          <div class="type-desc">障害・アップデート情報</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">イベント・キャンペーン名 <span>*</span></label>
+      <div class="reference-row" id="nameRefs">
+        <span class="ref-tag" onclick="fillRef('name','スロスピ P-Mission')">📋 P-Mission</span>
+        <span class="ref-tag" onclick="fillRef('name','Limit Break BATTLE')">📋 Limit Break BATTLE</span>
+        <span class="ref-tag" onclick="fillRef('name','レートアップ1.5倍ホール開放')">📋 レートアップホール</span>
+        <span class="ref-tag" onclick="fillRef('name','神スピフェス')">📋 神スピフェス</span>
+      </div>
+      <input type="text" id="inpName" placeholder="例）スロスピ P-Mission 第2弾開催！">
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">開始日時 <span>*</span></label>
+        <input type="datetime-local" id="inpStart">
+      </div>
+      <div class="form-group">
+        <label class="form-label">終了日時</label>
+        <input type="datetime-local" id="inpEnd">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">内容・概要メモ <span>*</span></label>
+      <textarea id="inpDesc" placeholder="例）ランキングバトル形式、1遊技の最高収支で競う。上位入賞者には限定スキルプレートをプレゼント。設定456多め。参加機種：チバリヨ2、まどマギ。"></textarea>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label">報酬・特典</label>
+        <input type="text" id="inpReward" placeholder="例）LRスキルプレート、ダイヤ×1000">
+      </div>
+      <div class="form-group">
+        <label class="form-label">対象機種・条件</label>
+        <input type="text" id="inpTarget" placeholder="例）全機種 / チバリヨ2限定">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label class="form-label">イベントページURL（任意）</label>
+      <input type="text" id="inpUrl" placeholder="例）/corner/event/index/99/">
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-primary btn-lg" onclick="step1Next()">
+        質問を生成 →
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 2: 質問確認 -->
+  <div class="panel" id="panel2">
+    <div class="panel-title">
+      <span class="badge info">STEP 2</span>
+      AIからの確認事項
+    </div>
+    <div class="notice-box">
+      以下の質問にできるだけ回答してください。不明な項目は空欄のままでも構いません。
+    </div>
+    <div class="question-list" id="questionList"></div>
+    <div class="action-row">
+      <button class="btn btn-secondary" onclick="goStep(1)">← 戻る</button>
+      <button class="btn btn-primary btn-lg" onclick="step2Next()">
+        草案を生成 →
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 3: 草案確認 -->
+  <div class="panel" id="panel3">
+    <div class="panel-title">
+      <span class="badge">STEP 3</span>
+      お知らせ草案の確認
+    </div>
+    <div class="notice-box warn">
+      AIが生成した草案です。内容を確認・編集してから承認してください。
+    </div>
+    <div class="draft-header">
+      <div style="font-size:13px;color:var(--text-muted)">ゲーム内お知らせ（本文）</div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-secondary" style="font-size:12px;padding:6px 14px" onclick="regenerateDraft()">🔄 再生成</button>
+      </div>
+    </div>
+    <div class="draft-content" id="draftContent" contenteditable="true"></div>
+    <div class="action-row">
+      <button class="btn btn-secondary" onclick="goStep(2)">← 戻る</button>
+      <button class="btn btn-success btn-lg" onclick="step3Next()">
+        この草案でOK →
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 4: 出力選択 -->
+  <div class="panel" id="panel4">
+    <div class="panel-title">
+      <span class="badge">STEP 4</span>
+      出力する形式を選択
+    </div>
+    <div class="output-options">
+      <div class="output-option required" id="opt-notice">
+        <span class="req-badge">必須</span>
+        <div class="out-icon">📢</div>
+        <div class="out-name">ゲーム内お知らせ</div>
+        <div class="out-desc">HTML形式・タイトル・期間</div>
+      </div>
+      <div class="output-option" id="opt-x" onclick="toggleOpt(this,'x')">
+        <div class="check-icon" id="check-x"></div>
+        <div class="out-icon">𝕏</div>
+        <div class="out-name">X（ツイッター）投稿</div>
+        <div class="out-desc">ハッシュタグ付き投稿文</div>
+      </div>
+      <div class="output-option" id="opt-push" onclick="toggleOpt(this,'push')">
+        <div class="check-icon" id="check-push"></div>
+        <div class="out-icon">🔔</div>
+        <div class="out-name">PUSH通知</div>
+        <div class="out-desc">タイトル＋短文（絵文字入り）</div>
+      </div>
+    </div>
+
+    <div class="notice-box">
+      ゲーム内お知らせは必ず生成されます。X投稿・PUSH通知は任意で追加できます。
+    </div>
+
+    <div class="action-row">
+      <button class="btn btn-secondary" onclick="goStep(3)">← 戻る</button>
+      <button class="btn btn-primary btn-lg" onclick="step4Next()">
+        全て生成する →
+      </button>
+    </div>
+  </div>
+
+  <!-- STEP 5: 完成 -->
+  <div class="panel" id="panel5">
+    <div class="panel-title">
+      <span class="badge success">完成</span>
+      生成されたお知らせ一覧
+    </div>
+
+    <div class="output-tabs" id="outputTabs"></div>
+    <div id="outputContents"></div>
+
+    <div class="action-row" style="margin-top:28px;justify-content:space-between;">
+      <button class="btn btn-secondary" onclick="goStep(1);resetAll()">
+        🔄 新規作成
+      </button>
+      <button class="btn btn-primary" onclick="copyAll()">
+        📋 全てコピー
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div class="loading-text" id="loadingText">AIが処理中...</div>
+  <div class="loading-sub" id="loadingSubText">しばらくお待ちください</div>
+</div>
+
+<script>
+const GEMINI_API_KEY = 'AIzaSyBS35do5HA1q7Q7LOztikIeuMMVEDYLgRI';
+const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-04-17:generateContent?key=${GEMINI_API_KEY}`;
+
+let currentStep = 1;
+let selectedType = 'event';
+let questionsData = [];
+let draftData = '';
+let outputFlags = { x: false, push: false };
+let generatedOutputs = {};
+
+function selectType(el) {
+  document.querySelectorAll('.type-option').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected');
+  selectedType = el.dataset.type;
+}
+
+function fillRef(field, val) {
+  if (field === 'name') document.getElementById('inpName').value = val;
+}
+
+function toggleOpt(el, key) {
+  outputFlags[key] = !outputFlags[key];
+  el.classList.toggle('checked', outputFlags[key]);
+  document.getElementById('check-' + key).textContent = outputFlags[key] ? '✓' : '';
+}
+
+function goStep(n) {
+  document.getElementById('panel' + currentStep).classList.remove('active');
+  document.getElementById('s' + currentStep).classList.remove('active');
+  if (n < currentStep) {
+    for (let i = n + 1; i <= currentStep; i++) {
+      document.getElementById('s' + i).classList.remove('done');
+    }
+  } else {
+    document.getElementById('s' + currentStep).classList.add('done');
+  }
+  currentStep = n;
+  document.getElementById('panel' + n).classList.add('active');
+  document.getElementById('s' + n).classList.add('active');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function showLoading(text, sub) {
+  document.getElementById('loadingText').textContent = text || 'AIが処理中...';
+  document.getElementById('loadingSubText').textContent = sub || 'しばらくお待ちください';
+  document.getElementById('loadingOverlay').classList.add('active');
+}
+function hideLoading() {
+  document.getElementById('loadingOverlay').classList.remove('active');
+}
+
+async function callGemini(prompt) {
+  const res = await fetch(GEMINI_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      contents: [{ parts: [{ text: prompt }] }],
+      generationConfig: { temperature: 0.7, maxOutputTokens: 2000 }
+    })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error?.message || 'API error');
+  return data.candidates[0].content.parts[0].text;
+}
+
+function getInputSummary() {
+  const typeNames = { event: 'イベント', campaign: 'キャンペーン', maintenance: 'メンテ・お知らせ' };
+  return {
+    type: typeNames[selectedType],
+    name: document.getElementById('inpName').value,
+    start: document.getElementById('inpStart').value,
+    end: document.getElementById('inpEnd').value,
+    desc: document.getElementById('inpDesc').value,
+    reward: document.getElementById('inpReward').value,
+    target: document.getElementById('inpTarget').value,
+    url: document.getElementById('inpUrl').value,
+  };
+}
+
+async function step1Next() {
+  const info = getInputSummary();
+  if (!info.name || !info.desc) {
+    alert('イベント名と内容・概要は必須です。');
+    return;
+  }
+  showLoading('確認事項を生成中...', 'お知らせ作成に必要な質問を考えています');
+  try {
+    const prompt = `あなたはスマートフォンゲーム「スロパチスピリット（スロスピ）」の運営担当者です。
+以下のイベント/キャンペーン情報をもとに、ゲーム内お知らせ・X投稿・PUSH通知を作成するにあたって不明点や確認が必要な事項を質問リストとして出力してください。
+
+【入力情報】
+種類: ${info.type}
+名称: ${info.name}
+開始: ${info.start || '未定'}
+終了: ${info.end || '未定'}
+概要: ${info.desc}
+報酬: ${info.reward || '未記入'}
+対象: ${info.target || '未記入'}
+URL: ${info.url || '未設定'}
+
+【出力形式】
+以下のJSON形式で3〜6個の質問を出力してください。必要でない質問は含めないでください。
+[
+  {
+    "id": "q1",
+    "label": "参加方法",
+    "question": "イベントへの参加方法を教えてください（自動参加か、特定の操作が必要かなど）",
+    "required": false,
+    "placeholder": "例）ゲームにログインするだけで自動参加"
+  }
+]
+JSONのみ出力し、前後に余計なテキストを含めないこと。`;
+
+    const raw = await callGemini(prompt);
+    const jsonStr = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+    questionsData = JSON.parse(jsonStr);
+    renderQuestions();
+    goStep(2);
+  } catch (e) {
+    alert('エラーが発生しました: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function renderQuestions() {
+  const container = document.getElementById('questionList');
+  container.innerHTML = questionsData.map((q, i) => `
+    <div class="question-item">
+      <div class="q-label">Q${i+1}. ${q.label}</div>
+      <div class="q-text">${q.question}</div>
+      <input type="text" id="ans_${q.id}" placeholder="${q.placeholder || ''}">
+      ${q.required ? '<div class="q-required"><span>※ 必須</span></div>' : '<div class="q-required">任意（空欄可）</div>'}
+    </div>
+  `).join('');
+}
+
+async function step2Next() {
+  const info = getInputSummary();
+  const answers = questionsData.map(q => ({
+    question: q.question,
+    answer: document.getElementById('ans_' + q.id)?.value || '（回答なし）'
+  }));
+
+  showLoading('草案を作成中...', 'ゲーム内お知らせの本文を生成しています');
+  try {
+    const prompt = `あなたはスマートフォンゲーム「スロパチスピリット（スロスピ）」の運営担当者です。
+以下の情報をもとに、ゲーム内お知らせ（HTML本文）の草案を作成してください。
+
+【基本情報】
+種類: ${info.type}
+名称: ${info.name}
+開始: ${info.start || '未定'}
+終了: ${info.end || '未定'}
+概要: ${info.desc}
+報酬: ${info.reward || '記載なし'}
+対象: ${info.target || '全ユーザー'}
+
+【質問への回答】
+${answers.map(a => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n')}
+
+【参考にする過去のお知らせの文体・スタイル】
+- スロパチスピリットをご利用いただきありがとうございます
+- ●●日（曜日）より〜を開催いたします！
+- 期間：〇〇年〇月〇日(曜) 〜 〇〇年〇月〇日(曜)
+- HTMLタグを使ったスタイリッシュな装飾（border, background-color, center, スタイル付き見出し）
+- h2タグで章立て（■イベント詳細、■参加方法、■報酬、■注意事項）
+- 締めは「スロパチスピリットを今後もよろしくお願いいたします」「スロパチスピリット運営事務局」
+
+【出力形式】
+HTML本文のみ出力してください。<style>タグ付きで、視覚的に整ったゲーム内お知らせらしいHTMLにしてください。
+前後に余計なテキストや\`\`\`タグは含めないこと。`;
+
+    const raw = await callGemini(prompt);
+    draftData = raw.trim();
+    document.getElementById('draftContent').textContent = draftData;
+    goStep(3);
+  } catch (e) {
+    alert('エラーが発生しました: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+async function regenerateDraft() {
+  await step2Next();
+}
+
+function step3Next() {
+  draftData = document.getElementById('draftContent').textContent;
+  goStep(4);
+}
+
+async function step4Next() {
+  const info = getInputSummary();
+  showLoading('各媒体用コンテンツを生成中...', '選択された形式でコンテンツを作成しています');
+
+  try {
+    generatedOutputs = {};
+
+    // ゲーム内お知らせ（必須）
+    generatedOutputs.notice = {
+      title: info.name,
+      start: info.start,
+      end: info.end,
+      html: draftData
+    };
+
+    // X投稿
+    if (outputFlags.x) {
+      const xPrompt = `あなたはスマートフォンゲーム「スロパチスピリット（スロスピ）」のX（Twitter）公式アカウント担当です。
+以下のゲーム内お知らせをもとに、X投稿用のツイート文を作成してください。
+
+【イベント情報】
+名称: ${info.name}
+期間: ${info.start || '開催中'} 〜 ${info.end || ''}
+概要: ${info.desc}
+報酬: ${info.reward || '詳細はお知らせをチェック'}
+
+【過去のX投稿の文体参考】
+- 【イベント名】のような【】タイトル付きが多い
+- 絵文字を適度に使用（🎰🎁✨🔔💥など）
+- ハッシュタグ: #スロスピ #スロパチスピリット
+- 詳細はゲーム内お知らせをご確認ください などの誘導
+- 140字程度、改行で読みやすく
+
+【出力形式】
+ツイート文のみ出力。前後に余計なテキスト不要。`;
+      generatedOutputs.x_post = await callGemini(xPrompt);
+    }
+
+    // PUSH通知
+    if (outputFlags.push) {
+      const pushPrompt = `あなたはスマートフォンゲーム「スロパチスピリット（スロスピ）」のPUSH通知担当です。
+以下のイベント情報をもとに、PUSH通知用のタイトルと本文を作成してください。
+
+【イベント情報】
+名称: ${info.name}
+期間: ${info.start || '開催中'} 〜 ${info.end || ''}
+概要: ${info.desc}
+報酬: ${info.reward || ''}
+
+【参考にする過去のPUSH通知の文体】
+- タイトル：日付（例：3/21）またはイベント略称、15文字以内
+- 本文：絵文字入り、40〜60文字程度でテンポよく
+- 例タイトル「3/21」例本文「ウィークエンドガチャが初登場🎰イベント対象機種のスキルプレートを手に入れよう✨」
+- ユーザーの行動を促すCTAを含める
+
+【出力形式】
+以下のJSON形式のみ出力。前後に余計なテキスト・\`\`\`タグ不要。
+{
+  "title": "PUSHタイトル（15字以内）",
+  "body": "PUSH本文（60字以内、絵文字入り）"
+}`;
+      const rawPush = await callGemini(pushPrompt);
+      const cleanPush = rawPush.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
+      try {
+        generatedOutputs.push_data = JSON.parse(cleanPush);
+      } catch {
+        generatedOutputs.push_data = { title: info.name, body: rawPush };
+      }
+    }
+
+    renderOutputs();
+    goStep(5);
+  } catch (e) {
+    alert('エラーが発生しました: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+
+function renderOutputs() {
+  const tabs = document.getElementById('outputTabs');
+  const contents = document.getElementById('outputContents');
+  tabs.innerHTML = '';
+  contents.innerHTML = '';
+
+  const items = [
+    { key: 'notice', label: '📢 ゲーム内お知らせ' },
+    ...(outputFlags.x ? [{ key: 'x_post', label: '𝕏 X投稿' }] : []),
+    ...(outputFlags.push ? [{ key: 'push_data', label: '🔔 PUSH通知' }] : []),
+  ];
+
+  items.forEach((item, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = item.label;
+    btn.onclick = () => switchTab(item.key);
+    tabs.appendChild(btn);
+
+    const div = document.createElement('div');
+    div.className = 'tab-content' + (i === 0 ? ' active' : '');
+    div.id = 'tab_' + item.key;
+    div.innerHTML = buildOutputContent(item.key);
+    contents.appendChild(div);
+  });
+}
+
+function switchTab(key) {
+  document.querySelectorAll('.tab-btn').forEach((b, i) => {
+    b.classList.toggle('active', b.textContent.includes(key === 'notice' ? 'ゲーム内' : key === 'x_post' ? '𝕏' : 'PUSH'));
+  });
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab_' + key).classList.add('active');
+}
+
+function buildOutputContent(key) {
+  if (key === 'notice') {
+    const n = generatedOutputs.notice;
+    return `
+      <div class="output-card">
+        <div class="output-card-header">
+          <span class="output-card-title">タイトル</span>
+          <button class="copy-btn" onclick="copyText('${escapeAttr(n.title)}', this)">コピー</button>
+        </div>
+        <div class="output-body">${escapeHtml(n.title)}</div>
+      </div>
+      <div class="output-card">
+        <div class="output-card-header">
+          <span class="output-card-title">掲載期間</span>
+        </div>
+        <div class="output-body">${n.start || '—'} 〜 ${n.end || '—'}</div>
+      </div>
+      <div class="output-card">
+        <div class="output-card-header">
+          <span class="output-card-title">本文HTML</span>
+          <button class="copy-btn" onclick="copyText(document.getElementById('notice_html').textContent, this)">コピー</button>
+        </div>
+        <div class="output-body html-preview" id="notice_html">${escapeHtml(n.html)}</div>
+      </div>`;
+  }
+  if (key === 'x_post') {
+    const txt = generatedOutputs.x_post || '';
+    return `
+      <div class="output-card">
+        <div class="output-card-header">
+          <span class="output-card-title">X投稿文</span>
+          <button class="copy-btn" onclick="copyText(document.getElementById('x_text').textContent, this)">コピー</button>
+        </div>
+        <div class="output-body" id="x_text">${escapeHtml(txt)}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);padding:8px 0">${countChars(txt)} 文字</div>`;
+  }
+  if (key === 'push_data') {
+    const p = generatedOutputs.push_data || {};
+    return `
+      <div class="output-card">
+        <div class="output-card-header">
+          <span class="output-card-title">PUSHタイトル</span>
+          <button class="copy-btn" onclick="copyText('${escapeAttr(p.title || '')}', this)">コピー</button>
+        </div>
+        <div class="output-body">${escapeHtml(p.title || '')}</div>
+      </div>
+      <div class="output-card">
+        <div class="output-card-header">
+          <span class="output-card-title">PUSH本文</span>
+          <button class="copy-btn" onclick="copyText('${escapeAttr(p.body || '')}', this)">コピー</button>
+        </div>
+        <div class="output-body">${escapeHtml(p.body || '')}</div>
+      </div>`;
+  }
+  return '';
+}
+
+function countChars(str) {
+  return [...str].length;
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function escapeAttr(s) {
+  return String(s).replace(/'/g, '&apos;').replace(/"/g, '&quot;').replace(/\n/g,'\\n');
+}
+
+async function copyText(text, btn) {
+  try {
+    await navigator.clipboard.writeText(text.replace(/\\n/g,'\n'));
+    if (btn) {
+      btn.textContent = 'コピー済み！';
+      btn.classList.add('copied');
+      setTimeout(() => { btn.textContent = 'コピー'; btn.classList.remove('copied'); }, 1800);
+    }
+  } catch { alert('コピーに失敗しました'); }
+}
+
+async function copyAll() {
+  const parts = [];
+  if (generatedOutputs.notice) {
+    parts.push('【ゲーム内お知らせ タイトル】\n' + generatedOutputs.notice.title);
+    parts.push('\n【本文HTML】\n' + generatedOutputs.notice.html);
+  }
+  if (generatedOutputs.x_post) parts.push('\n\n【X投稿文】\n' + generatedOutputs.x_post);
+  if (generatedOutputs.push_data) {
+    parts.push('\n\n【PUSH通知 タイトル】\n' + (generatedOutputs.push_data.title || ''));
+    parts.push('\n【PUSH本文】\n' + (generatedOutputs.push_data.body || ''));
+  }
+  await copyText(parts.join('\n'), null);
+  alert('全てのコンテンツをクリップボードにコピーしました！');
+}
+
+function resetAll() {
+  document.getElementById('inpName').value = '';
+  document.getElementById('inpStart').value = '';
+  document.getElementById('inpEnd').value = '';
+  document.getElementById('inpDesc').value = '';
+  document.getElementById('inpReward').value = '';
+  document.getElementById('inpTarget').value = '';
+  document.getElementById('inpUrl').value = '';
+  questionsData = [];
+  draftData = '';
+  outputFlags = { x: false, push: false };
+  generatedOutputs = {};
+  document.getElementById('opt-x').classList.remove('checked');
+  document.getElementById('opt-push').classList.remove('checked');
+  document.getElementById('check-x').textContent = '';
+  document.getElementById('check-push').textContent = '';
+  for (let i = 1; i <= 5; i++) {
+    document.getElementById('s' + i).classList.remove('done', 'active');
+  }
+}
+</script>
+</body>
+</html>
